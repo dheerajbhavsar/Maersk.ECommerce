@@ -1,8 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<StartupServices xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
-  <Parameters>
-    <Parameter Name="Maersk.ECommerce.Api.Customers_InstanceCount" Value="-1" />
-    <Parameter Name="Maersk.ECommerce.Api.Search_InstanceCount" Value="-1" />
-    <Parameter Name="Maersk.ECommerce.Products_InstanceCount" Value="-1" />
-  </Parameters>
-</StartupServices>

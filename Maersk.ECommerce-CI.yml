@@ -1,0 +1,87 @@
+# Agent Queue 'Azure Pipelines' was used with unrecognized Agent Specification, vmImage property must be specified to determine image - https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/hosted?view=azure-devops&tabs=yaml#software
+variables:
+- name: BuildParameters.solution
+  value: '**\*.sln'
+- name: BuildParameters.serviceFabricProject
+  value: '**\*.sfproj'
+trigger:
+  branches:
+    include:
+    - refs/heads/master
+name: $(date:yyyyMMdd)$(rev:.r)
+jobs:
+- job: Job_1
+  displayName: Agent job 1
+  pool:
+    name: Azure Pipelines
+  steps:
+  - checkout: self
+  - task: NuGetToolInstaller@1
+    displayName: Use NuGet 6.2.1
+    inputs:
+      versionSpec: 6.2.1
+  - task: NuGetCommand@2
+    displayName: NuGet restore
+    inputs:
+      solution: $(BuildParameters.solution)
+  - task: DotNetCoreCLI@2
+    displayName: Build solution **\*.csproj
+    inputs:
+      projects: '**/*.csproj'
+      arguments: -c $(BuildConfiguration) -a $(BuildPlatform)
+  - task: DotNetCoreCLI@2
+    displayName: Build solution **\*.sfproj
+    inputs:
+      projects: '**/*.sfproj'
+      arguments: -c $(BuildConfiguration) /t:Package /p:PackageLocation=$(build.artifactstagingdirectory)\applicationpackage
+  - task: VSBuild@1
+    displayName: Build solution **\*.sln
+    enabled: False
+    inputs:
+      solution: $(BuildParameters.solution)
+      msbuildArgs: /p:Deterministic=true /p:PathMap=$(Agent.BuildDirectory)=C:\
+      platform: $(BuildPlatform)
+      configuration: $(BuildConfiguration)
+  - task: VSBuild@1
+    displayName: Build solution **\*.sfproj
+    enabled: False
+    inputs:
+      solution: $(BuildParameters.serviceFabricProject)
+      msbuildArgs: /t:Package /p:PackageLocation=$(build.artifactstagingdirectory)\applicationpackage
+      platform: $(BuildPlatform)
+      configuration: $(BuildConfiguration)
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(build.artifactstagingdirectory)\pdbs'
+    inputs:
+      SourceFolder: $(build.artifactstagingdirectory)\applicationpackage
+      Contents: '**\*.pdb'
+      TargetFolder: $(build.artifactstagingdirectory)\pdbs
+  - task: DeleteFiles@1
+    displayName: Delete files from $(build.artifactstagingdirectory)\applicationpackage
+    inputs:
+      SourceFolder: $(build.artifactstagingdirectory)\applicationpackage
+      Contents: '**\*.pdb'
+  - task: ServiceFabricUpdateManifests@2
+    displayName: Update Service Fabric Manifests (Manifest versions)
+    inputs:
+      applicationPackagePath: $(build.artifactstagingdirectory)\applicationpackage
+      versionSuffix: .$(build.buildnumber)
+      updateOnlyChanged: true
+      pkgArtifactName: drop
+  - task: CopyFiles@2
+    displayName: 'Copy Files to: $(build.artifactstagingdirectory)\projectartifacts'
+    condition: succeededOrFailed()
+    inputs:
+      SourceFolder: $(system.defaultworkingdirectory)
+      Contents: >-
+        **\PublishProfiles\*.xml
+
+        **\ApplicationParameters\*.xml
+      TargetFolder: $(build.artifactstagingdirectory)\projectartifacts
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact: drop'
+    condition: succeededOrFailed()
+    inputs:
+      PathtoPublish: $(build.artifactstagingdirectory)
+      TargetPath: '\\my\share\$(Build.DefinitionName)\$(Build.BuildNumber)'
+...
