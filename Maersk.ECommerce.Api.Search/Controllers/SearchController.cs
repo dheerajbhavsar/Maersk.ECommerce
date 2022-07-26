@@ -36,7 +36,7 @@ public class SearchController : ControllerBase
                 BaseAddress = serviceUri
             };
 
-            var result = await client.GetAsync($"api/customer/{id}");
+            var result = await client.GetAsync($"api/customers/{id}");
 
             if(result.IsSuccessStatusCode)
             {
